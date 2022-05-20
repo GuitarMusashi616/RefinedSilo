@@ -6,13 +6,13 @@ local silo = require "silo"
 
 local term = term or util.mock("term", "clear", "write", "getCursorPos", "setCursorPos", "getSize", "setCursorBlink", "clearLine")
 -- local peripheral = peripheral or util.mock("peripheral")
-local keys = util.mock("keys", "getName")
+local keys = keys or util.mock("keys", "getName")
 local shell = shell or util.mock("shell", "run")
 
-os.pullEvent = function() return "key", 10, true end
-keys.getName = function() return "" end
-term.getCursorPos = function() return 10,10 end
-term.getSize = function() return 51, 16 end
+--os.pullEvent = function() return "key", 10, true end
+--keys.getName = function() return "" end
+--term.getCursorPos = function() return 10,10 end
+--term.getSize = function() return 51, 16 end
 
 local tArgs = {...}
 local width, height = term.getSize()

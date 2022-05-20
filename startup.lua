@@ -1,6 +1,6 @@
 
 
-
+local util = require "util"
 local shell = shell or mock("shell", "run")
 local fs = fs or mock("fs", "exists")
 
@@ -12,5 +12,5 @@ for i=1,#files do
   if fs.exists(file) then
     shell.run("rm "..file)
   end
-  wgit(repo, file)
+  util.wgit(repo, file)
 end

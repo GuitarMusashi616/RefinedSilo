@@ -6,8 +6,8 @@ local util = require "util"
 local peripheral = peripheral or util.mock("peripheral", "getNames")
 local fs = fs or util.mock("fs", "list")
 
-peripheral.getNames = function() return {} end
-fs.list = function(dir) return {} end
+--peripheral.getNames = function() return {} end
+--fs.list = function(dir) return {} end
 
 local all, beginsWith, inc_tbl, forEach, t2f = util.all, util.beginsWith, util.inc_tbl, util.forEach, util.t2f
 
