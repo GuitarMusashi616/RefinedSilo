@@ -1,6 +1,6 @@
 local util = {}
-local shell = shell or util.mock("shell", "run")
-local textutils = textutils or util.mock("textutils", "serialize")
+local shell = shell or {run=function(cmd) end}
+local textutils = textutils or {serialize=function(txt) end}
 
 -- helper functions --
 function util.all(tbl) 
