@@ -1,6 +1,15 @@
-local helper = require "helper"
+-- specify name of dump chest and pickup chest (all other chests connected to modem network will be used as storage)
+local DUMP_CHEST_NAME = "minecraft:chest_2"
+local PICKUP_CHEST_NAME = "minecraft:chest_3"
 
-local all, beginsWith, inc_tbl, for_each, t2f = helper.all, helper.beginsWith, helper.inc_tbl, helper.for_each, helper.t2f
+local util = require "util"
+local peripheral = peripheral or util.mock("peripheral", "getNames")
+local fs = fs or util.mock("fs", "list")
+
+peripheral.getNames = function() return {} end
+fs.list = function(dir) return {} end
+
+local all, beginsWith, inc_tbl, forEach, t2f = util.all, util.beginsWith, util.inc_tbl, util.forEach, util.t2f
 
 -- silo singleton code --
 local silo = {
@@ -78,12 +87,12 @@ function silo.get_item(item_name, count, dest)
   --assert(silo.loc[item_name], item_name .. " loc not recorded")
   local sources = silo.loc[item_name]
   while sources do
-    stack_size = table.remove(sources)
-    slot = table.remove(sources)
-    perf_index = table.remove(sources)
-    perf_name = silo.get_peripheral_name(perf_index)  
+    local stack_size = table.remove(sources)
+    local slot = table.remove(sources)
+    local perf_index = table.remove(sources)
+    local perf_name = silo.get_peripheral_name(perf_index)  
     
-    amount = math.min(stack_size, 64, rem)
+    local amount = math.min(stack_size, 64, rem)
     peripheral.call(perf_name, "pushItems", dest, slot, amount)
     stack_size = stack_size - amount
     if stack_size > 0 then
@@ -147,7 +156,7 @@ function silo.how_many(item_name)
     table.insert(craftable, can_make)
   end
   
-  return math.min(unpack(craftable)), "need more stuff"
+  return math.min(table.unpack(craftable)), "need more stuff"
 end
 
 function silo.craft(item_name, num)
@@ -228,8 +237,8 @@ end
 function silo.load_recipes()
   -- run after loading items
   for _,file in pairs(fs.list("patterns")) do
-    fileRoot = file:sub(1,#file-4)
-    nameYieldItemCount = require("patterns/"..fileRoot)
+    local fileRoot = file:sub(1,#file-4)
+    local nameYieldItemCount = require("patterns/"..fileRoot)
     for name,yieldItemCount in pairs(nameYieldItemCount) do
       table.insert(yieldItemCount,silo.get_peripheral_index(fileRoot))
       silo.recipes[name] = yieldItemCount

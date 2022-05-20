@@ -1,9 +1,18 @@
 -- recommend each chest only touching at most 1 modem
 -- recommend flat wired modem for computer
 
--- specify name of dump chest and pickup chest (all other chests connected to modem network will be used as storage)
-local DUMP_CHEST_NAME = "minecraft:chest_2"
-local PICKUP_CHEST_NAME = "minecraft:chest_3"
+local util = require "util"
+local silo = require "silo"
+
+local term = term or util.mock("term", "clear", "write", "getCursorPos", "setCursorPos", "getSize", "setCursorBlink", "clearLine")
+-- local peripheral = peripheral or util.mock("peripheral")
+local keys = util.mock("keys", "getName")
+local shell = shell or util.mock("shell", "run")
+
+os.pullEvent = function() return "key", 10, true end
+keys.getName = function() return "" end
+term.getCursorPos = function() return 10,10 end
+term.getSize = function() return 51, 16 end
 
 local tArgs = {...}
 local width, height = term.getSize()
@@ -15,9 +24,6 @@ if #tArgs > 0 then
   print("press tab to clear pickup/dropoff chests")
   error()
 end
-
-local silo = require "silo"
-
 
 function startup()
   term.clear()
