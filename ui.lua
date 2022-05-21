@@ -117,86 +117,92 @@ startup()
 local word = ""
 local itemChoices = listItems(word)
 while true do
-  local event,keyCode,isHeld = os.pullEvent("key")
-  
-  local key = keys.getName(keyCode)
+  local eventData = os.pullEvent()
+  if eventData[1] == "timer" then
+    silo.try_crafting_from_stack()
     
-  if #key == 1 then
-    word = word .. key
-    term.write(key)
-    itemChoices = listItems(word) 
-  elseif key == "space" then
-    word = word .. " "
-    term.write(" ")
-    itemChoices = listItems(word)
-  elseif key == "backspace" then
-    word = word:sub(1,#word-1)
-    backspace()
-    itemChoices = listItems(word)
-  elseif key == "semicolon" then
-    word = word .. ":"
-    term.write(":")
-    itemChoices = listItems(word)
-  elseif key == "minus" then
-    word = word .. "_"
-    term.write("_")
-    itemChoices = listItems(word)
-  elseif key == "grave" then
-    backspace(#word)
-    word = ""
-    itemChoices = listItems(word)
-  elseif key == "capsLock" then
-    if silo.show_crafts then
-      silo.show_crafts = false
-    else
-      silo.show_crafts = true
-    end
-    if not word then
-      word = ""
-    end
-    itemChoices = listItems(word)
-  elseif key == "tab" then
-    notify("dumping...")
-    local a = silo.dump(silo.dump_chest)
-    local b = silo.dump(silo.pickup_chest)
-    if a and b then
-      silo.update_all_items()
+  elseif eventData[1] == "key" then
+    local keyCode, isHeld = eventData[2], eventData[3]
+    local key = keys.getName(keyCode)
       
+    if #key == 1 then
+      word = word .. key
+      term.write(key)
+      itemChoices = listItems(word) 
+    elseif key == "space" then
+      word = word .. " "
+      term.write(" ")
       itemChoices = listItems(word)
-      notify("dump successful")
-    else
-      notify("dump failed")
-    end    
-  elseif 49 <= keyCode and keyCode <= 57 then
-    local sel = keyCode - 48
-    if sel <= #itemChoices then
-      local item = itemChoices[sel]
-      local count = silo.dict[item]
-      if count and count > 64 then
-        count = 64
-      end
-      if count == 0 then
-        local potential, msg = silo.how_many(item)
-        if potential == 0 then
-          notify(msg)
-        else   
-          local prompt = ("how many? (max %i) "):format(potential)
-          local num = getUserInput(prompt)
-          num = tonumber(num)
-          if num > potential then
-            notify(("can only make up to %i"):format(potential))
-          else
-            notify(("crafting %i %s"):format(num, item))
-            silo.craft(item, num)
-          end
-        end
+    elseif key == "backspace" then
+      word = word:sub(1,#word-1)
+      backspace()
+      itemChoices = listItems(word)
+    elseif key == "semicolon" then
+      word = word .. ":"
+      term.write(":")
+      itemChoices = listItems(word)
+    elseif key == "minus" then
+      word = word .. "_"
+      term.write("_")
+      itemChoices = listItems(word)
+    elseif key == "grave" then
+      backspace(#word)
+      word = ""
+      itemChoices = listItems(word)
+    elseif key == "capsLock" then
+      if silo.show_crafts then
+        silo.show_crafts = false
       else
-        silo.get_item(item, count)
+        silo.show_crafts = true
+      end
+      if not word then
+        word = ""
+      end
+      itemChoices = listItems(word)
+    elseif key == "tab" then
+      notify("dumping...")
+      local a = silo.dump(silo.dump_chest)
+      local b = silo.dump(silo.pickup_chest)
+      if a and b then
+        silo.update_all_items()
+        
         itemChoices = listItems(word)
-        notify(("grabbed %ix %s"):format(count,item))
-      end 
-    else
-      notify(("%i is not an option"):format(sel))
+        notify("dump successful")
+      else
+        notify("dump failed")
+      end    
+    elseif 49 <= keyCode and keyCode <= 57 then
+      local sel = keyCode - 48
+      if sel <= #itemChoices then
+        local item = itemChoices[sel]
+        local count = silo.dict[item]
+        if count and count > 64 then
+          count = 64
+        end
+        if count == 0 then
+          local potential, msg = silo.how_many(item)
+          if potential == 0 then
+            notify(msg)
+          else   
+            local prompt = ("how many? (max %i) "):format(potential)
+            local num = getUserInput(prompt)
+            num = tonumber(num)
+            if num > potential then
+              notify(("can only make up to %i"):format(potential))
+            else
+              notify(("crafting %i %s"):format(num, item))
+              silo.push_to_crafting_stack(item, num)
+              silo.try_crafting_from_stack()
+            end
+          end
+        else
+          silo.get_item(item, count)
+          itemChoices = listItems(word)
+          notify(("grabbed %ix %s"):format(count,item))
+        end 
+      else
+        notify(("%i is not an option"):format(sel))
+      end
     end
   end
 end

@@ -16,6 +16,7 @@ local silo = {
   dict = {},
   recipes = {},
   loc = {},
+  stack = {},
   perf_cache = {},
   chest_names = {},
   show_crafts = true,
