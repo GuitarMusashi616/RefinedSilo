@@ -117,10 +117,15 @@ startup()
 local word = ""
 local itemChoices = listItems(word)
 while true do
-  local eventData = os.pullEvent()
+  local eventData = {os.pullEvent()}
   if eventData[1] == "timer" then
-    silo.try_crafting_from_stack()
-    
+    if silo.try_crafting_from_stack() then
+      os.startTimer(5)
+      silo.dump(silo.dump_chest)
+      silo.dump(silo.pickup_chest)
+      silo.update_all_items()
+    end
+
   elseif eventData[1] == "key" then
     local keyCode, isHeld = eventData[2], eventData[3]
     local key = keys.getName(keyCode)
@@ -192,7 +197,9 @@ while true do
             else
               notify(("crafting %i %s"):format(num, item))
               silo.push_to_crafting_stack(item, num)
-              silo.try_crafting_from_stack()
+              if silo.try_crafting_from_stack() then
+                os.startTimer(5)
+              end
             end
           end
         else

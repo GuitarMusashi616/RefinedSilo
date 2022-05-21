@@ -146,14 +146,14 @@ end
 
 function silo.try_crafting_from_stack()
   while #silo.stack > 0 do
-    local item, count = table.unpack(table.remove(silo.stack))
+    local item, count = table.unpack(silo.stack[#silo.stack])
     local item_counts = silo.get_item_counts(item, count)
   -- if have enough materials then craft it, otherwise set timer and return
     if silo.contains(item_counts) then
       silo.craft(item, math.ceil(count))
+      table.remove(silo.stack)
     else
-      os.startTimer(1)
-      break
+      return true
     end
   end
 end
