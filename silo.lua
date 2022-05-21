@@ -1,6 +1,6 @@
 -- specify name of dump chest and pickup chest (all other chests connected to modem network will be used as storage)
-local DUMP_CHEST_NAME = "minecraft:chest_2"
-local PICKUP_CHEST_NAME = "minecraft:chest_3"
+local DUMP_CHEST_NAME = "minecraft:chest_0"
+local PICKUP_CHEST_NAME = "minecraft:chest_1"
 
 local util = require "util"
 local peripheral = peripheral or util.mock("peripheral", "getNames")
@@ -149,10 +149,13 @@ function silo.try_crafting_from_stack()
     local item, count = table.unpack(silo.stack[#silo.stack])
     local item_counts = silo.get_item_counts(item, count)
   -- if have enough materials then craft it, otherwise set timer and return
+    --print(("checking if we can craft %ix %s"):format(math.ceil(count), item))
     if silo.contains(item_counts) then
+      --print("attempting to craft it")
       silo.craft(item, math.ceil(count))
       table.remove(silo.stack)
     else
+      --print("resetting timer")
       return true
     end
   end
@@ -261,12 +264,14 @@ function silo.craft(item_name, num)
   assert(yieldItemCount, "recipe for "..tostring(item_name).. " does not exist")
   local craft_x_times = math.ceil(num / yieldItemCount[1])
 
-  local perf_name = yieldItemCount[#yieldItemCount]
+  local perf_index = yieldItemCount[#yieldItemCount]
+  local perf_name = silo.get_peripheral_name(perf_index)
 
   for i = 2,#yieldItemCount-1,2 do
     local item = yieldItemCount[i]
     local count = yieldItemCount[i+1] * craft_x_times
 
+    --print(("sending %ix %s to %s"):format(count, item, perf_name))
     silo.get_item(item, count, perf_name)
   end
 end
@@ -326,14 +331,6 @@ function silo.get_peripheral_index(perf_name)
   end
 end
 
-function silo.get_peripheral_id(root)
-  for _,name in pairs(peripheral.getNames()) do
-    if name:find(root) then
-      return name
-    end
-  end
-end
-
 function silo.get_peripheral_name(index)
   local perfs = peripheral.getNames()
   assert(perfs[index], ("%i is not in %s"):format(index, table.concat(perfs,",")))
@@ -346,7 +343,7 @@ function silo.load_recipes()
     local fileRoot = file:sub(1,#file-4)
     local nameYieldItemCount = require("patterns/"..fileRoot)
     for name,yieldItemCount in pairs(nameYieldItemCount) do
-      table.insert(yieldItemCount,silo.get_peripheral_id(fileRoot))
+      table.insert(yieldItemCount,silo.get_peripheral_index(fileRoot))
       silo.recipes[name] = yieldItemCount
       if not silo.dict[name] then
         silo.dict[name] = 0
