@@ -138,9 +138,80 @@ function silo.get_item_no_mem(item_name, count)
 end
 
 
+function silo.get_item_counts(item_name, amount)
+  local item_counts = {}
+  local yieldItemCount = silo.recipes[item_name]
+  assert(yieldItemCount, tostring(item_name) .. " recipe not found")
+
+  for i=2,#yieldItemCount-1,2 do
+    local item = yieldItemCount[i]
+    local count = yieldItemCount[i+1]
+    if not item_counts[item] then
+      item_counts[item] = 0
+    end
+    item_counts[item] = item_counts[item] + count * amount
+  end
+
+  return item_counts
+end
+
+function silo.check_for_craftable(item_counts)
+  for item, count in pairs(item_counts) do
+    if silo.recipes[item] then
+      local stock = silo.dict[item] or 0
+      local needed = count - stock
+      if needed > 0 then
+        return item, needed
+      end
+    end
+  end
+end
+
+function silo.raw_item_counts(item_name)
+  -- breaks down craftable components into base items
+
+  local item_counts = silo.get_item_counts(item_name, 1)
+  local craftable_item, needed = silo.check_for_craftable(item_counts)
+  while craftable_item do
+    local new_item_counts = silo.get_item_counts(craftable_item, needed)
+    item_counts[craftable_item] = item_counts[craftable_item] - needed
+    if item_counts[craftable_item] <= 0 then
+      item_counts[craftable_item] = nil
+    end
+    for item, count in pairs(new_item_counts) do
+      if not item_counts[item] then
+        item_counts[item] = 0
+      end
+      item_counts[item] = item_counts[item] + count
+    end
+    craftable_item, needed = silo.check_for_craftable(item_counts)
+  end
+  
+  return item_counts
+end
+
 function silo.how_many(item_name)
+  local raw_item_counts = silo.raw_item_counts(item_name)
+  local craftable = {}
+
+  for item, count in pairs(raw_item_counts) do
+    if not silo.dict[item] then
+      return 0, ("Need %i %s"):format(count, item)
+    end
+
+    local can_make = math.floor(silo.dict[item] / count)
+    table.insert(craftable, can_make)
+  end
+
+  return math.min(table.unpack(craftable)), "need more stuff"
+end
+
+
+function silo.how_many_old(item_name)
   local yieldItemCount = silo.recipes[item_name]
   local craftable = {} 
+
+  -- while there is a craftable recipe, break it down into non craftables
   
   for i = 2,#yieldItemCount-1,2 do
     local item = yieldItemCount[i]
@@ -249,4 +320,13 @@ function silo.load_recipes()
   end
 end
 
+local function test_how_many()
+  silo.recipes["wire_copper"] = {4, "copper_plate", 1}
+  silo.recipes["copper_plate"] = {1, "copper_ingot", 1}
+  silo.dict["copper_ingot"] = 1
+  local inv = silo.how_many2("wire_copper")
+  print(inv)
+end
+
+test_how_many()
 return silo
