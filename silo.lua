@@ -261,8 +261,7 @@ function silo.craft(item_name, num)
   assert(yieldItemCount, "recipe for "..tostring(item_name).. " does not exist")
   local craft_x_times = math.ceil(num / yieldItemCount[1])
 
-  local perf_index = yieldItemCount[#yieldItemCount]
-  local perf_name = silo.get_peripheral_name(perf_index)
+  local perf_name = yieldItemCount[#yieldItemCount]
 
   for i = 2,#yieldItemCount-1,2 do
     local item = yieldItemCount[i]
@@ -327,6 +326,14 @@ function silo.get_peripheral_index(perf_name)
   end
 end
 
+function silo.get_peripheral_id(root)
+  for _,name in pairs(peripheral.getNames()) do
+    if name:find(root) then
+      return name
+    end
+  end
+end
+
 function silo.get_peripheral_name(index)
   local perfs = peripheral.getNames()
   assert(perfs[index], ("%i is not in %s"):format(index, table.concat(perfs,",")))
@@ -339,7 +346,7 @@ function silo.load_recipes()
     local fileRoot = file:sub(1,#file-4)
     local nameYieldItemCount = require("patterns/"..fileRoot)
     for name,yieldItemCount in pairs(nameYieldItemCount) do
-      table.insert(yieldItemCount,silo.get_peripheral_index(fileRoot))
+      table.insert(yieldItemCount,silo.get_peripheral_id(fileRoot))
       silo.recipes[name] = yieldItemCount
       if not silo.dict[name] then
         silo.dict[name] = 0
