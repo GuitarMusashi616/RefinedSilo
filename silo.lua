@@ -83,7 +83,7 @@ end
 function silo.get_item(item_name, count, dest)  
   local rem = count
   dest = dest or silo.pickup_chest
-  
+
   --assert(silo.loc[item_name], item_name .. " loc not recorded")
   local sources = silo.loc[item_name]
   while sources do
@@ -113,43 +113,65 @@ function silo.get_item(item_name, count, dest)
   end
   
   if rem > 0 then
-    error(("Need %i more %s"):format(rem, item_name), 0)
+      error(("Need %i more %s"):format(rem, item_name), 0)
   end  
 end
 
 
--- go through all items and take the specified item until count rem <= 0
-function silo.get_item_no_mem(item_name, count)
-  local rem = count
-  item_name = item_name:lower()
-  for chest_name in all(silo.chest_names) do
-    local items = peripheral.call(chest_name, "list")
-    for i,item in pairs(items) do
-      if item.name:find(item_name) then
-        local amount = math.min(64, rem)
-        silo.grab(chest_name, i, amount)
-        rem = rem - amount
-        if rem <= 0 then
-          break
-        end
+function silo.push_to_crafting_stack(item_name, amount)
+  local item_counts = silo.get_item_counts(item_name, amount)
+  table.insert(silo.stack, {item_name, amount})
+  for item, count in pairs(item_counts) do
+    if silo.recipes[item] then
+      local stock = silo.dict[item] or 0
+      local needed = count - stock
+      
+
+      if needed > 0 then
+        table.insert(silo.stack, {item, needed})
       end
     end
   end
 end
 
+function silo.contains(item_counts)
+  for ing, req in pairs(item_counts) do
+    if silo.dict[ing] < req then
+      return false
+    end
+  end
+  return true
+end
 
+function silo.try_crafting_from_stack()
+  while #silo.stack > 0 do
+    local item, count = table.unpack(table.remove(silo.stack))
+    local item_counts = silo.get_item_counts(item, count)
+  -- if have enough materials then craft it, otherwise set timer and return
+    if silo.contains(item_counts) then
+      silo.craft(item, math.ceil(count))
+    else
+      os.startTimer(1)
+      break
+    end
+  end
+end
+
+-- crafting item_name x times requires how much material?
 function silo.get_item_counts(item_name, amount)
   local item_counts = {}
   local yieldItemCount = silo.recipes[item_name]
   assert(yieldItemCount, tostring(item_name) .. " recipe not found")
+  local yield = yieldItemCount[1]
 
   for i=2,#yieldItemCount-1,2 do
     local item = yieldItemCount[i]
     local count = yieldItemCount[i+1]
+
     if not item_counts[item] then
       item_counts[item] = 0
     end
-    item_counts[item] = item_counts[item] + count * amount
+    item_counts[item] = item_counts[item] + (count * amount)/yield
   end
 
   return item_counts
@@ -171,6 +193,7 @@ function silo.raw_item_counts(item_name)
   -- breaks down craftable components into base items
 
   local item_counts = silo.get_item_counts(item_name, 1)
+  local yield = silo.recipes[item_name][1]
   local craftable_item, needed = silo.check_for_craftable(item_counts)
   while craftable_item do
     local new_item_counts = silo.get_item_counts(craftable_item, needed)
@@ -182,7 +205,7 @@ function silo.raw_item_counts(item_name)
       if not item_counts[item] then
         item_counts[item] = 0
       end
-      item_counts[item] = item_counts[item] + count
+      item_counts[item] = item_counts[item] + count/yield
     end
     craftable_item, needed = silo.check_for_craftable(item_counts)
   end
@@ -203,11 +226,13 @@ function silo.how_many(item_name)
     table.insert(craftable, can_make)
   end
 
-  return math.min(table.unpack(craftable)), "need more stuff"
+  local can_craft_x_times = math.min(table.unpack(craftable))
+
+  return can_craft_x_times, "need more stuff"
 end
 
 
-function silo.how_many_old(item_name)
+function silo.how_many_deprecated(item_name)
   local yieldItemCount = silo.recipes[item_name]
   local craftable = {} 
 
@@ -233,13 +258,15 @@ end
 function silo.craft(item_name, num)
   local yieldItemCount = silo.recipes[item_name]
   assert(yieldItemCount, "recipe for "..tostring(item_name).. " does not exist")
-  -- grab the items required
+  local craft_x_times = math.ceil(num / yieldItemCount[1])
+
   local perf_index = yieldItemCount[#yieldItemCount]
   local perf_name = silo.get_peripheral_name(perf_index)
+
   for i = 2,#yieldItemCount-1,2 do
     local item = yieldItemCount[i]
-    local count = yieldItemCount[i+1] * num
-    
+    local count = yieldItemCount[i+1] * craft_x_times
+
     silo.get_item(item, count, perf_name)
   end
 end
@@ -321,12 +348,30 @@ function silo.load_recipes()
 end
 
 local function test_how_many()
-  silo.recipes["wire_copper"] = {4, "copper_plate", 1}
-  silo.recipes["copper_plate"] = {1, "copper_ingot", 1}
-  silo.dict["copper_ingot"] = 1
-  local inv = silo.how_many2("wire_copper")
+  silo.recipes["wire_copper"] = {5, "copper_plate", 4}
+  silo.recipes["copper_plate"] = {3, "copper_ingot", 2}
+  silo.dict["copper_ingot"] = 36
+  local inv = silo.how_many("wire_copper")
   print(inv)
 end
 
-test_how_many()
+local function test_make_wire()
+  silo.stack = {}
+  -- each recipe found gets put on the stack
+  -- the recipes on the stack start getting crafted
+  -- when the recipe cannot be crafted a timer is set to try again in the future
+  silo.recipes["wire_copper"] = {5, "copper_plate", 4}
+  silo.recipes["copper_plate"] = {3, "copper_ingot", 2}
+  silo.dict["copper_ingot"] = 20
+
+  silo.push_to_crafting_stack("wire_copper", 14)
+  print(silo.stack)
+  -- stack["wire_copper", "copper_plate"]
+
+  silo.try_crafting_from_stack()
+  -- check copper plate, send items to machines
+  -- check wire_copper, see theres not enough copper plate, set timer
+  -- elsewhere try crafting from stack is called when timer event fires, so stack is attempted once more
+end
+
 return silo
