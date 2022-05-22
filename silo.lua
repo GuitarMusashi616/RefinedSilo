@@ -2,6 +2,8 @@
 local DUMP_CHEST_NAME = "minecraft:chest_0"
 local PICKUP_CHEST_NAME = "minecraft:chest_1"
 
+local MODEM_SIDE = "back"
+
 local util = require "util"
 local peripheral = peripheral or util.mock("peripheral", "getNames")
 local fs = fs or util.mock("fs", "list")
@@ -15,6 +17,7 @@ local all, beginsWith, inc_tbl, forEach, t2f = util.all, util.beginsWith, util.i
 local silo = {
   dict = {},
   recipes = {},
+  crafts = {},
   loc = {},
   stack = {},
   perf_cache = {},
@@ -258,6 +261,15 @@ function silo.how_many_deprecated(item_name)
   return math.min(table.unpack(craftable)), "need more stuff"
 end
 
+function silo.broadcast(data)
+  if not rednet.isOpen() then
+    rednet.open(MODEM_SIDE)
+  end
+  local msg = textutils.serialize(data)
+  --print("broadcasting "..msg)
+  rednet.broadcast(msg)
+end
+
 function silo.craft(item_name, num)
   local yieldItemCount = silo.recipes[item_name]
   assert(yieldItemCount, "recipe for "..tostring(item_name).. " does not exist")
@@ -272,6 +284,18 @@ function silo.craft(item_name, num)
 
     --print(("sending %ix %s to %s"):format(count, item, perf_name))
     silo.get_item(item, count, perf_name)
+  end
+  
+  --print(tostring(item_name) .. " checkin it")
+  if silo.crafts[item_name] then
+    --print(tostring(item_name) .. " is in")
+    local data = {craft_x_times}
+    local craftPattern = silo.crafts[item_name]
+    for i=2,#craftPattern do
+      table.insert(data, craftPattern[i])
+    end
+      
+    silo.broadcast(data)
   end
 end
 
@@ -336,18 +360,73 @@ function silo.get_peripheral_name(index)
   return perfs[index]
 end
 
+function silo.load_crafts(craftingGuide)
+  if not craftingGuide then
+    return
+  end
+  
+  for name, itemLocs in pairs(craftingGuide) do
+    silo.crafts[name] = itemLocs
+  end
+end
+
+function silo.recipe_is_crafting(name, yieldItemCount)
+  for i=2,#yieldItemCount-1,2 do
+    local item = yieldItemCount[i]
+    local count = yieldItemCount[i+1]
+    if type(count) == "number" then
+      return false
+    elseif type(count) == "table" then
+      return true
+    else
+      error("unrecognized pattern "..tostring(name),0)
+    end
+  end
+end
+
+function silo.convert_to_recipe(yieldItemCount)
+  local res = {yieldItemCount[1]}
+  
+  for i=2,#yieldItemCount-1,2 do
+    local item = yieldItemCount[i]
+    local count = yieldItemCount[i+1]
+    table.insert(res, item)
+    table.insert(res, #count)
+  end
+ 
+  table.insert(res, yieldItemCount[#yieldItemCount])  
+  return res
+end
+
+function silo.add_to_recipes(nameYieldItemCount, fileRoot)
+  for name,yieldItemCount in pairs(nameYieldItemCount) do
+    table.insert(yieldItemCount, silo.get_peripheral_index(fileRoot))
+    
+    if silo.recipe_is_crafting(name, yieldItemCount) then
+      silo.crafts[name] = yieldItemCount
+      silo.recipes[name] = silo.convert_to_recipe(yieldItemCount)
+    else
+      silo.recipes[name] = yieldItemCount
+    end
+    
+    if not silo.dict[name] then
+      silo.dict[name] = 0
+    end
+  end
+
+end
+
 function silo.load_recipes()
+  if not fs.exists("patterns") then
+    return
+  end
+  
   -- run after loading items
   for _,file in pairs(fs.list("patterns")) do
     local fileRoot = file:sub(1,#file-4)
     local nameYieldItemCount = require("patterns/"..fileRoot)
-    for name,yieldItemCount in pairs(nameYieldItemCount) do
-      table.insert(yieldItemCount,silo.get_peripheral_index(fileRoot))
-      silo.recipes[name] = yieldItemCount
-      if not silo.dict[name] then
-        silo.dict[name] = 0
-      end
-    end
+
+    silo.add_to_recipes(nameYieldItemCount, fileRoot)
   end
 end
 
