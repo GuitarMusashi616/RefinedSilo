@@ -56,9 +56,4 @@ function util.mock(lib_name, ...)
   return lib
 end
 
-function util.wgit(repo, file)
-  local cmd = ("wget https://raw.githubusercontent.com/GuitarMusashi616/%s/master/%s"):format(repo, file)
-  shell.run(cmd)
-end
-
 return util

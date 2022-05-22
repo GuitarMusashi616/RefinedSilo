@@ -17,5 +17,5 @@ for i=1,#files do
   if fs.exists(file) then
     shell.run("rm "..file)
   end
-  wgit(repo, file)
+  wgit(repo, file, "best")
 end
