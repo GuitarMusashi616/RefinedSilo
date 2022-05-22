@@ -1,0 +1,41 @@
+[33mcommit 42e126c2b642713e382a5808e7a80a57a97c235d[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m)[m
+Author: = <=>
+Date:   Fri May 20 22:57:57 2022 -0800
+
+    moved wgit into startup so that it works standalone
+
+[33mcommit 2484b65c171683ef39fa8a13dfaadfd14f833ee8[m
+Author: = <=>
+Date:   Fri May 20 16:30:56 2022 -0800
+
+    bug
+
+[33mcommit 3346d4b0f9825ef432105c7ee52a7ae6ab4ac9e5[m
+Author: = <=>
+Date:   Fri May 20 16:28:27 2022 -0800
+
+    refactored ui key event handling
+
+[33mcommit f252f56e2ad041c9079b38a3eb501c3f34c1015f[m
+Author: = <=>
+Date:   Fri May 20 15:29:19 2022 -0800
+
+    quick fix for util
+
+[33mcommit 0aa897facbf6d5039f2ecf6640f6eb0ed0ab73a1[m
+Author: = <=>
+Date:   Fri May 20 15:22:43 2022 -0800
+
+    ready for in game testing
+
+[33mcommit 3e20bda5091edc4dd3f931d9dbff437d617359ac[m
+Author: = <=>
+Date:   Fri May 20 15:18:42 2022 -0800
+
+    refactored based on vscode suggestions
+
+[33mcommit a91f12c415bcc6686cf0bdbf7831929aaf48a016[m
+Author: = <=>
+Date:   Thu May 19 13:30:39 2022 -0800
+
+    initialize

@@ -197,7 +197,6 @@ function silo.raw_item_counts(item_name)
   -- breaks down craftable components into base items
 
   local item_counts = silo.get_item_counts(item_name, 1)
-  local yield = silo.recipes[item_name][1]
   local craftable_item, needed = silo.check_for_craftable(item_counts)
   while craftable_item do
     local new_item_counts = silo.get_item_counts(craftable_item, needed)
@@ -209,7 +208,7 @@ function silo.raw_item_counts(item_name)
       if not item_counts[item] then
         item_counts[item] = 0
       end
-      item_counts[item] = item_counts[item] + count/yield
+      item_counts[item] = item_counts[item] + count
     end
     craftable_item, needed = silo.check_for_craftable(item_counts)
   end
