@@ -1,15 +1,32 @@
 local MODEM_SIDE = "right"
 
 local crafter = {
-  loc_to_slot = {1,2,3,5,6,7,9,10,11}
+  loc_to_slot = {1,2,3,5,6,7,9,10,11},
+  queue = {}
 }
 
 function crafter.run()
   rednet.open(MODEM_SIDE)
+  parallel.waitForAll(crafter.producer, crafter.consumer)  
+end
+
+function crafter.producer()
   while true do
     local msg = {rednet.receive()}
-    crafter.handle(msg)
+    table.insert(crafter.queue, msg)
+    sleep(0.05)
   end  
+end
+
+function crafter.consumer()
+  while true do
+    if #crafter.queue > 0 then
+      if crafter.handle(crafter.queue[1]) then
+        table.remove(crafter.queue,1)
+      end
+    end
+    sleep(0.05)
+  end
 end
 
 function crafter.handle(msg)
@@ -23,7 +40,7 @@ function crafter.handle(msg)
   end
   
   --print(msg[2])
-  crafter.craft(data)  
+  return crafter.craft(data)  
 end
 
 function crafter.move_from_top_to_bottom(item, amount)
@@ -70,6 +87,7 @@ function crafter.craft(data)
   end
   
   crafter.clearInv()
+  return true
 end
 
 function crafter.clearInv()

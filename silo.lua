@@ -123,16 +123,22 @@ end
 
 
 function silo.push_to_crafting_stack(item_name, amount)
-  local item_counts = silo.get_item_counts(item_name, amount)
-  table.insert(silo.stack, {item_name, amount})
-  for item, count in pairs(item_counts) do
-    if silo.recipes[item] then
-      local stock = silo.dict[item] or 0
-      local needed = count - stock
+  local queue = {{item_name, amount}}
+  while #queue > 0 do
+    local itemTable = table.remove(queue)
+    local item_counts = silo.get_item_counts(itemTable[1], itemTable[2])
+      
+  
+    table.insert(silo.stack, {itemTable[1], itemTable[2]})
+    for item, count in pairs(item_counts) do
+      if silo.recipes[item] then
+        local stock = silo.dict[item] or 0
+        local needed = count - stock
       
 
-      if needed > 0 then
-        table.insert(silo.stack, {item, needed})
+        if needed > 0 then
+          table.insert(queue, {item, needed})
+        end
       end
     end
   end
@@ -158,6 +164,7 @@ function silo.try_crafting_from_stack()
       silo.craft(item, math.ceil(count))
       table.remove(silo.stack)
     else
+      --print("not enough "..textutils.serialize(item))
       --print("resetting timer")
       return true
     end
@@ -355,6 +362,7 @@ function silo.get_peripheral_index(perf_name)
 end
 
 function silo.get_peripheral_name(index)
+  assert(index, "index is invalid: " .. tostring(index))
   local perfs = peripheral.getNames()
   assert(perfs[index], ("%i is not in %s"):format(index, table.concat(perfs,",")))
   return perfs[index]
