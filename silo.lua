@@ -90,7 +90,7 @@ function silo.get_item(item_name, count, dest)
 
   --assert(silo.loc[item_name], item_name .. " loc not recorded")
   local sources = silo.loc[item_name]
-  while sources do
+  while sources and #sources >= 3 do
     local stack_size = table.remove(sources)
     local slot = table.remove(sources)
     local perf_index = table.remove(sources)
@@ -121,15 +121,24 @@ function silo.get_item(item_name, count, dest)
   end  
 end
 
+function silo.get_make_x_amount(item_name, amount)
+  local yieldItemCounts = silo.recipes[item_name]
+  assert(yieldItemCounts, tostring(item_name) .. " is an invalid recipe")
+  local yield = yieldItemCounts[1]
+  local craft_x_times = math.ceil(amount/yield)
+  return craft_x_times * yield
+end
 
 function silo.push_to_crafting_stack(item_name, amount)
   local queue = {{item_name, amount}}
   while #queue > 0 do
     local itemTable = table.remove(queue)
-    local item_counts = silo.get_item_counts(itemTable[1], itemTable[2])
-      
+    local make_x_amount = silo.get_make_x_amount(itemTable[1], itemTable[2])
+    local item_counts = silo.get_item_counts(itemTable[1], make_x_amount)
+    --item_counts min to make amount or make 1  
   
     table.insert(silo.stack, {itemTable[1], itemTable[2]})
+    --print(("adding to stack: %ix %s"):format(itemTable[2], itemTable[1]))
     for item, count in pairs(item_counts) do
       if silo.recipes[item] then
         local stock = silo.dict[item] or 0
@@ -141,7 +150,7 @@ function silo.push_to_crafting_stack(item_name, amount)
         end
       end
     end
-  end
+  end  
 end
 
 function silo.contains(item_counts)
@@ -153,9 +162,19 @@ function silo.contains(item_counts)
   return true
 end
 
+function silo.print_missing(item_counts)
+  for ing, req in pairs(item_counts) do
+    local stock = silo.dict[ing]
+    if stock < req then
+      print(("missing %i/%i %s"):format(req-stock, req, ing))
+    end
+  end
+end
+
 function silo.try_crafting_from_stack()
   while #silo.stack > 0 do
     local item, count = table.unpack(silo.stack[#silo.stack])
+    --print(("target %ix %s"):format(count, item))
     local item_counts = silo.get_item_counts(item, count)
   -- if have enough materials then craft it, otherwise set timer and return
     --print(("checking if we can craft %ix %s"):format(math.ceil(count), item))
@@ -164,7 +183,8 @@ function silo.try_crafting_from_stack()
       silo.craft(item, math.ceil(count))
       table.remove(silo.stack)
     else
-      --print("not enough "..textutils.serialize(item))
+      --print("not enough for "..textutils.serialize(item))
+      --print(silo.print_missing(item_counts))
       --print("resetting timer")
       return true
     end
@@ -436,6 +456,9 @@ function silo.load_recipes()
 
     silo.add_to_recipes(nameYieldItemCount, fileRoot)
   end
+  local h = io.open("silo_recipes.lua","w")
+  h:write(textutils.serialize(silo.recipes))
+  h:close()  
 end
 
 local function test_how_many()
