@@ -1,6 +1,6 @@
 -- specify name of dump chest and pickup chest (all other chests connected to modem network will be used as storage)
-local DUMP_CHEST_NAME = "minecraft:chest_0"
-local PICKUP_CHEST_NAME = "minecraft:chest_1"
+local DUMP_CHEST_NAME = "minecraft:chest_2"
+local PICKUP_CHEST_NAME = "minecraft:chest_3"
 
 local MODEM_SIDE = "back"
 
@@ -155,7 +155,7 @@ end
 
 function silo.contains(item_counts)
   for ing, req in pairs(item_counts) do
-    if silo.dict[ing] < req then
+    if not silo.dict[ing] or silo.dict[ing] < req then
       return false
     end
   end
@@ -171,6 +171,15 @@ function silo.print_missing(item_counts)
   end
 end
 
+function silo.notify(msg)
+  local width, height = term.getSize()
+  local x,y = term.getCursorPos()
+  term.setCursorPos(1,height)
+  term.clearLine()
+  term.write(msg)
+  term.setCursorPos(x,y)
+end
+
 function silo.try_crafting_from_stack()
   while #silo.stack > 0 do
     local item, count = table.unpack(silo.stack[#silo.stack])
@@ -180,10 +189,12 @@ function silo.try_crafting_from_stack()
     --print(("checking if we can craft %ix %s"):format(math.ceil(count), item))
     if silo.contains(item_counts) then
       --print("attempting to craft it")
+      silo.notify(("making %ix %s"):format(count, item))
       silo.craft(item, math.ceil(count))
       table.remove(silo.stack)
     else
-      --print("not enough for "..textutils.serialize(item))
+      
+      --silo.notify("not enough for "..item)
       --print(silo.print_missing(item_counts))
       --print("resetting timer")
       return true
@@ -256,36 +267,15 @@ function silo.how_many(item_name)
     end
 
     local can_make = math.floor(silo.dict[item] / count)
+    if can_make <= 0 then
+      return 0, ("Need %i %s"):format(count-silo.dict[item],item)
+    end
     table.insert(craftable, can_make)
   end
 
   local can_craft_x_times = math.min(table.unpack(craftable))
 
   return can_craft_x_times, "need more stuff"
-end
-
-
-function silo.how_many_deprecated(item_name)
-  local yieldItemCount = silo.recipes[item_name]
-  local craftable = {} 
-
-  -- while there is a craftable recipe, break it down into non craftables
-  
-  for i = 2,#yieldItemCount-1,2 do
-    local item = yieldItemCount[i]
-    local count = yieldItemCount[i + 1]
-    if not silo.dict[item] then
-      return 0, ("Need %i %s"):format(count, item)
-    end
-    if silo.dict[item] == 0 then
-      return 0, ("Craft %i %s first"):format(count, item)
-    end
-    
-    local can_make = math.floor(silo.dict[item] / count)
-    table.insert(craftable, can_make)
-  end
-  
-  return math.min(table.unpack(craftable)), "need more stuff"
 end
 
 function silo.broadcast(data)
@@ -456,9 +446,9 @@ function silo.load_recipes()
 
     silo.add_to_recipes(nameYieldItemCount, fileRoot)
   end
-  local h = io.open("silo_recipes.lua","w")
-  h:write(textutils.serialize(silo.recipes))
-  h:close()  
+  --local h = io.open("silo_recipes.lua","w")
+  --h:write(textutils.serialize(silo.recipes))
+  --h:close()  
 end
 
 local function test_how_many()
