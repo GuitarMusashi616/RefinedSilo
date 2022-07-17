@@ -4,7 +4,8 @@
 local util = require "util"
 local silo = require "silo"
 
-local term = term or util.mock("term", "clear", "write", "getCursorPos", "setCursorPos", "getSize", "setCursorBlink", "clearLine")
+local term = term or
+    util.mock("term", "clear", "write", "getCursorPos", "setCursorPos", "getSize", "setCursorBlink", "clearLine")
 -- local peripheral = peripheral or util.mock("peripheral")
 local keys = keys or util.mock("keys", "getName")
 local shell = shell or util.mock("shell", "run")
@@ -14,7 +15,7 @@ local shell = shell or util.mock("shell", "run")
 --term.getCursorPos = function() return 10,10 end
 --term.getSize = function() return 51, 16 end
 
-local tArgs = {...}
+local tArgs = { ... }
 local width, height = term.getSize()
 
 if #tArgs > 0 then
@@ -27,10 +28,10 @@ end
 
 function startup()
   term.clear()
-  term.setCursorPos(1,1)
+  term.setCursorPos(1, 1)
   term.write("Search: ")
   term.setCursorBlink(true)
-  
+
   silo.startup()
   silo.update_all_items()
   silo.load_recipes()
@@ -38,77 +39,77 @@ end
 
 function backspace(num)
   num = num or 1
-  local x,y = term.getCursorPos()
-  if x-num <= 8 then
+  local x, y = term.getCursorPos()
+  if x - num <= 8 then
     return
   end
-  term.setCursorPos(x-num,y)
-  for _ = 1,num do
+  term.setCursorPos(x - num, y)
+  for _ = 1, num do
     term.write(" ")
   end
-  term.setCursorPos(x-num,y)
+  term.setCursorPos(x - num, y)
 end
 
 function printWord(word)
-  local x,y = term.getCursorPos()
-  term.setCursorPos(1,y+1)
+  local x, y = term.getCursorPos()
+  term.setCursorPos(1, y + 1)
   term.clearLine()
-  term.write("word: "..word)
-  term.setCursorPos(x,y)
+  term.write("word: " .. word)
+  term.setCursorPos(x, y)
 end
 
 function notify(msg)
-  local x,y = term.getCursorPos()
-  for i=1,0,-1 do
-    term.setCursorPos(1,height-i)
+  local x, y = term.getCursorPos()
+  for i = 1, 0, -1 do
+    term.setCursorPos(1, height - i)
     term.clearLine()
   end
   term.write(msg)
-  term.setCursorPos(x,y)
+  term.setCursorPos(x, y)
 end
 
 function getUserInput(prompt)
-  local x,y = term.getCursorPos()
-  for i = 2,0,-1 do
-    term.setCursorPos(1,height-i)
+  local x, y = term.getCursorPos()
+  for i = 2, 0, -1 do
+    term.setCursorPos(1, height - i)
     term.clearLine()
   end
-  
-  term.setCursorPos(1,height-1)    
+
+  term.setCursorPos(1, height - 1)
   term.write(prompt)
   sleep(0.05)
   local input = io.read()
-  term.setCursorPos(x,y)
+  term.setCursorPos(x, y)
   return input
 end
 
 function clearUnderSearch()
-  local x,y = term.getCursorPos()
-  for i=2,height do
-    term.setCursorPos(1,i)
+  local x, y = term.getCursorPos()
+  for i = 2, height do
+    term.setCursorPos(1, i)
     term.clearLine()
   end
-  term.setCursorPos(x,y)
+  term.setCursorPos(x, y)
 end
 
 function listItems(word)
   clearUnderSearch()
-  local x,y = term.getCursorPos()
+  local x, y = term.getCursorPos()
   local line = 1
   local itemChoices = {}
   for item, count in pairs(silo.dict) do
     if item:find(word) and (count ~= 0 or silo.show_crafts) then
-      if line >= height-2 then
-        term.setCursorPos(x,y)
+      if line >= height - 2 then
+        term.setCursorPos(x, y)
         return itemChoices
       end
-      term.setCursorPos(1,y+line)
+      term.setCursorPos(1, y + line)
       term.write(("%i) %ix %s"):format(line, count, item))
       itemChoices[line] = item
       line = line + 1
     end
   end
-  term.setCursorPos(x,y)
+  term.setCursorPos(x, y)
   return itemChoices
 end
 
@@ -117,7 +118,7 @@ startup()
 local word = ""
 local itemChoices = listItems(word)
 while true do
-  local eventData = {os.pullEvent()}
+  local eventData = { os.pullEvent() }
   if eventData[1] == "timer" then
     if silo.try_crafting_from_stack() then
       os.startTimer(5)
@@ -129,17 +130,17 @@ while true do
   elseif eventData[1] == "key" then
     local keyCode, isHeld = eventData[2], eventData[3]
     local key = keys.getName(keyCode)
-      
+
     if #key == 1 then
       word = word .. key
       term.write(key)
-      itemChoices = listItems(word) 
+      itemChoices = listItems(word)
     elseif key == "space" then
       word = word .. " "
       term.write(" ")
       itemChoices = listItems(word)
     elseif key == "backspace" then
-      word = word:sub(1,#word-1)
+      word = word:sub(1, #word - 1)
       backspace()
       itemChoices = listItems(word)
     elseif key == "semicolon" then
@@ -170,12 +171,12 @@ while true do
       local b = silo.dump(silo.pickup_chest)
       if a and b then
         silo.update_all_items()
-        
+
         itemChoices = listItems(word)
         notify("dump successful")
       else
         notify("dump failed")
-      end    
+      end
     elseif 49 <= keyCode and keyCode <= 57 then
       local sel = keyCode - 48
       if sel <= #itemChoices then
@@ -188,25 +189,25 @@ while true do
           local potential, msg = silo.how_many(item)
           if potential == 0 then
             notify(msg)
-          else   
+          else
             local prompt = ("how many? (max %i) "):format(potential)
             local num = getUserInput(prompt)
             num = tonumber(num)
-            if num > potential then
-              notify(("can only make up to %i"):format(potential))
-            else
-              notify(("crafting %i %s"):format(num, item))
-              silo.push_to_crafting_stack(item, num)
-              if silo.try_crafting_from_stack() then
-                os.startTimer(5)
-              end
+            --if num > potential then
+            --  notify(("can only make up to %i"):format(potential))
+            --else
+            notify(("crafting %i %s"):format(num, item))
+            silo.push_to_crafting_stack(item, num)
+            if silo.try_crafting_from_stack() then
+              os.startTimer(5)
             end
+            --end
           end
         else
           silo.get_item(item, count)
           itemChoices = listItems(word)
-          notify(("grabbed %ix %s"):format(count,item))
-        end 
+          notify(("grabbed %ix %s"):format(count, item))
+        end
       else
         notify(("%i is not an option"):format(sel))
       end
